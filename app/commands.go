@@ -20,17 +20,49 @@ func parseArgs(input string) []string {
 		ch := input[i]
 
 		switch {
-		case ch == '\'' && !inDouble:
-			inSingle = !inSingle
-		case ch == '"' && !inSingle:
-			inDouble = !inDouble
-		case (ch == ' ' || ch == '\t') && !inSingle && !inDouble:
-			if curr.Len() > 0 {
-				args = append(args, curr.String())
-				curr.Reset()
+		case inSingle:
+			if ch == '\'' {
+				inSingle = false
+			} else {
+				curr.WriteByte(ch)
 			}
+
+		case inDouble:
+			if ch == '\\' && i+1 < len(input) {
+				next := input[i+1]
+				if next == '"' || next == '\\' {
+					curr.WriteByte(next)
+					i++
+				} else {
+					curr.WriteByte(ch)
+				}
+			} else if ch == '"' {
+				inDouble = false
+			} else {
+				curr.WriteByte(ch)
+			}
+
 		default:
-			curr.WriteByte(ch)
+			switch {
+			case ch == '\\' && i+1 < len(input):
+				curr.WriteByte(input[i+1])
+				i++
+
+			case ch == '\'':
+				inSingle = true
+
+			case ch == '"':
+				inDouble = true
+
+			case ch == ' ' || ch == '\t':
+				if curr.Len() > 0 {
+					args = append(args, curr.String())
+					curr.Reset()
+				}
+
+			default:
+				curr.WriteByte(ch)
+			}
 		}
 	}
 
