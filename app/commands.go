@@ -135,3 +135,20 @@ func execBuiltin(w io.Writer, cmd string, args []string) {
 		fmt.Fprintln(w, cmd+": command not found")
 	}
 }
+
+func handleRedirection(args []string, flags int, targetStream *io.Writer, fileToClose **os.File) []string {
+	if len(args) < 2 {
+		return args
+	}
+
+	fileName := args[len(args)-1]
+	file, err := os.OpenFile(fileName, flags, 0644)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return args
+	}
+
+	*fileToClose = file
+	*targetStream = file
+	return args[:len(args)-2]
+}

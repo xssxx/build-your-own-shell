@@ -37,28 +37,23 @@ func main() {
 		var stderr io.Writer = os.Stderr
 		var fileToClose *os.File
 
-		if len(args) >= 2 && (args[len(args)-2] == ">" || args[len(args)-2] == "1>") {
-			fileName := args[len(args)-1]
-			file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				continue
+		// redirection handle
+		if len(args) >= 2 {
+			op := args[len(args)-2]
+
+			switch op {
+			case ">", "1>":
+				args = handleRedirection(args, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, &stdout, &fileToClose)
+			case "2>":
+				args = handleRedirection(args, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, &stderr, &fileToClose)
+			case ">>", "1>>":
+				args = handleRedirection(args, os.O_APPEND|os.O_CREATE|os.O_WRONLY, &stdout, &fileToClose)
+			case "2>>":
+				args = handleRedirection(args, os.O_APPEND|os.O_CREATE|os.O_WRONLY, &stderr, &fileToClose)
 			}
-			fileToClose = file
-			stdout = file
-			args = args[:len(args)-2]
-		} else if len(args) >= 2 && args[len(args)-2] == "2>" {
-			fileName := args[len(args)-1]
-			file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				continue
-			}
-			fileToClose = file
-			stderr = file
-			args = args[:len(args)-2]
 		}
 
+		// commands handle
 		if strings.HasPrefix(cmdName, "exit") {
 			if fileToClose != nil {
 				fileToClose.Close()
