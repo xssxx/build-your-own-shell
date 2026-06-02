@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// manually parse arguments to handle string inside quote
+// manually parse arguments to handle quote and backslash
 func parseArgs(input string) []string {
 	var args []string
 	var curr strings.Builder
