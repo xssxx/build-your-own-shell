@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var builtin []string = []string{"echo", "exit", "type"}
+var builtin []string = []string{"echo", "exit", "type", "pwd"}
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
@@ -35,6 +35,8 @@ func main() {
 			fmt.Println(cmd[5:])
 		} else if strings.HasPrefix(fields[0], "type") {
 			handleType(strings.TrimSpace(fields[1]))
+		} else if slices.Contains(builtin, strings.TrimSpace(fields[0])) {
+			execBuiltin(strings.TrimSpace(fields[0]))
 		} else if _, err := exec.LookPath(fields[0]); err == nil {
 			cmd := exec.Command(fields[0], fields[1:]...)
 			cmd.Stdout = os.Stdout
@@ -56,4 +58,15 @@ func handleType(cmd string) {
 	}
 
 	fmt.Printf("%s: not found\n", cmd)
+}
+
+func execBuiltin(cmd string) {
+	switch cmd {
+	case "pwd":
+		dir, err := os.Getwd()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+		fmt.Println(dir)
+	}
 }
