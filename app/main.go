@@ -34,6 +34,7 @@ func main() {
 		args := fields[1:]
 
 		var stdout io.Writer = os.Stdout
+		var stderr io.Writer = os.Stderr
 		var fileToClose *os.File
 
 		if len(args) >= 2 && (args[len(args)-2] == ">" || args[len(args)-2] == "1>") {
@@ -45,6 +46,16 @@ func main() {
 			}
 			fileToClose = file
 			stdout = file
+			args = args[:len(args)-2]
+		} else if len(args) >= 2 && args[len(args)-2] == "2>" {
+			fileName := args[len(args)-1]
+			file, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				continue
+			}
+			fileToClose = file
+			stderr = file
 			args = args[:len(args)-2]
 		}
 
@@ -62,7 +73,7 @@ func main() {
 		} else if _, err := exec.LookPath(cmdName); err == nil {
 			cmd := exec.Command(cmdName, args...)
 			cmd.Stdout = stdout
-			cmd.Stderr = os.Stderr
+			cmd.Stderr = stderr
 			cmd.Run()
 		} else {
 			fmt.Println(cmd + ": command not found")
@@ -74,5 +85,6 @@ func main() {
 		}
 
 		stdout = os.Stdout
+		stderr = os.Stderr
 	}
 }
