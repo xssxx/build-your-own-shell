@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -71,6 +72,21 @@ func execBuiltin(cmd string, args []string) {
 		fmt.Println(dir)
 	case "cd":
 		path := strings.TrimSpace(args[0])
+
+		// handle home directory (~) manually
+		if path == "~" || strings.HasPrefix(path, "~/") {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				fmt.Println("cd: " + path + ": No such file or directory")
+			}
+
+			if path == "~" {
+				path = home
+			} else {
+				path = filepath.Join(home, path[2:])
+			}
+		}
+
 		err := os.Chdir(path)
 		if err != nil {
 			fmt.Println("cd: " + path + ": No such file or directory")
