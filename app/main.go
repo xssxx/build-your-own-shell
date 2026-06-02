@@ -9,17 +9,19 @@ import (
 var _ = fmt.Print
 
 func main() {
-	fmt.Print("$ ")
 	readInput()
 }
 
 func readInput() {
-	command, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	for {
+		fmt.Print("$ ")
+		command, err := bufio.NewReader(os.Stdin).ReadString('\n')
 
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		fmt.Println(command[:len(command)-1] + ": command not found")
 	}
-
-	fmt.Println(command[:len(command)-1] + ": command not found")
 }
