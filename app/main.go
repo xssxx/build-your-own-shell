@@ -9,39 +9,51 @@ import (
 	"strings"
 )
 
-func main() {
-	builtin := []string{"echo", "exit", "type"}
+var builtin []string = []string{"echo", "exit", "type"}
 
+func main() {
 	reader := bufio.NewReader(os.Stdin)
+
 	for {
 		fmt.Print("$ ")
-		input, err := reader.ReadString('\n')
+		cmd, err := reader.ReadString('\n')
+		cmd = strings.TrimSpace(cmd)
+		fields := strings.Fields(cmd)
+
+		if len(fields[0]) == 0 {
+			os.Exit(0)
+		}
 
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
 
-		input = strings.TrimSpace(input)
-		inputParts := strings.Split(input, " ")
-		cmd := inputParts[0]
-		args := inputParts[1:]
-
-		switch cmd {
-		case "exit":
+		if strings.HasPrefix(fields[0], "exit") {
 			os.Exit(0)
-		case "echo":
-			fmt.Println(strings.Join(args, " "))
-		case "type":
-			if slices.Contains(builtin, args[0]) {
-				fmt.Println(args[0] + " is a shell builtin")
-			} else if path, _ := exec.LookPath(args[0]); path != "" {
-				fmt.Println(args[0] + " is " + path)
-			} else {
-				fmt.Println(args[0] + ": not found")
-			}
-		default:
+		} else if strings.HasPrefix(fields[0], "echo") {
+			fmt.Println(cmd[5:])
+		} else if strings.HasPrefix(fields[0], "type") {
+			handleType(strings.TrimSpace(fields[1]))
+		} else if _, err := exec.LookPath(fields[0]); err == nil {
+			cmd := exec.Command(fields[0], fields[1:]...)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Run()
+		} else {
 			fmt.Println(cmd + ": command not found")
 		}
 	}
+}
+
+func handleType(cmd string) {
+	if slices.Contains(builtin, cmd) {
+		fmt.Printf("%s is a shell builtin\n", cmd)
+		return
+	} else if path, err := exec.LookPath(cmd); err == nil {
+		fmt.Printf("%s is %s\n", cmd, path)
+		return
+	}
+
+	fmt.Printf("%s: not found\n", cmd)
 }
