@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -85,7 +86,7 @@ func handleType(cmd string) {
 	fmt.Printf("%s: not found\n", cmd)
 }
 
-func execBuiltin(cmd string, args []string) {
+func execBuiltin(w io.Writer, cmd string, args []string) {
 	switch cmd {
 	case "pwd":
 		dir, err := os.Getwd()
@@ -93,15 +94,22 @@ func execBuiltin(cmd string, args []string) {
 			fmt.Fprintln(os.Stderr, err)
 			return
 		}
-		fmt.Println(dir)
+		fmt.Fprintln(w, dir)
+
 	case "cd":
-		path := strings.TrimSpace(args[0])
+		if len(args) == 0 {
+			home, _ := os.UserHomeDir()
+			os.Chdir(home)
+			return
+		}
+
+		path := args[0]
 
 		// handle home directory (~) manually
 		if path == "~" || strings.HasPrefix(path, "~/") {
 			home, err := os.UserHomeDir()
 			if err != nil {
-				fmt.Println("cd: " + path + ": No such file or directory")
+				fmt.Fprintln(w, "cd: "+path+": No such file or directory")
 			}
 
 			if path == "~" {
@@ -113,15 +121,17 @@ func execBuiltin(cmd string, args []string) {
 
 		err := os.Chdir(path)
 		if err != nil {
-			fmt.Println("cd: " + path + ": No such file or directory")
+			fmt.Fprintln(w, "cd: "+path+": No such file or directory")
 			return
 		}
+
 	case "echo":
 		for i := range args {
 			args[i] = strings.TrimSpace(args[i])
 		}
-		fmt.Println(strings.Join(args, " "))
+		fmt.Fprintln(w, strings.Join(args, " "))
+
 	default:
-		fmt.Println(cmd + ": command not found")
+		fmt.Fprintln(w, cmd+": command not found")
 	}
 }
