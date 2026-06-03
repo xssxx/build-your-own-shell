@@ -16,19 +16,52 @@ var builtin []string = []string{"echo", "exit", "type", "pwd", "cd"}
 type TabCompleter struct{}
 
 func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	var candidates []string
+
+	// get path of this program where it's running
+	pathEnv := os.Getenv("PATH")
+	for dir := range strings.SplitSeq(pathEnv, string(os.PathListSeparator)) {
+		items, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, item := range items {
+			info, err := item.Info()
+			if err != nil {
+				continue
+			}
+			// check file permission bits if it is executable bit
+			if !info.IsDir() && info.Mode().Perm()&0111 != 0 {
+				candidates = append(candidates, info.Name())
+			}
+		}
+	}
+
+	for _, k := range builtin {
+		candidates = append(candidates, k)
+	}
+
 	current := string(line[:pos])
 	var suggestions [][]rune
 
+	seen := map[string]bool{}
 	var matches []string
-	for _, cmd := range builtin {
-		if strings.HasPrefix(cmd, current) {
+	for _, cmd := range candidates {
+		if strings.HasPrefix(cmd, current) && !seen[cmd] {
+			seen[cmd] = true
 			matches = append(matches, cmd)
+		}
+		// handle case if executable file start with `./` and it's not builtin command
+		pathCmd := "./" + cmd
+		if strings.HasPrefix(pathCmd, current) && !slices.Contains(builtin, cmd) && !seen[pathCmd] {
+			seen[pathCmd] = true
+			matches = append(matches, pathCmd)
 		}
 	}
 
 	// print bell character if no matchs
 	if len(matches) == 0 {
-		fmt.Print("\a")
+		fmt.Print("\a") // bell character: `\x07`, `\a`
 		return nil, 0
 	}
 
@@ -48,6 +81,8 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 func main() {
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:       "$ ",
+		HistoryFile:  "/tmp/my_shell_history",
+		HistoryLimit: 100,
 		AutoComplete: &TabCompleter{},
 	})
 	rl.Config.AutoComplete = &TabCompleter{}
@@ -57,9 +92,6 @@ func main() {
 	defer rl.Close()
 
 	for {
-		// fmt.Fprint(os.Stdout, "$ ")
-		// cmd, err := reader.ReadString('\n')
-
 		cmd, err := rl.Readline()
 		readline.AddHistory(cmd)
 		readline.SetAutoComplete(rl.Config.AutoComplete)
@@ -83,7 +115,7 @@ func main() {
 		var stderr io.Writer = os.Stderr
 		var fileToClose *os.File
 
-		// redirection handle
+		// handle redirection
 		if len(args) >= 2 {
 			op := args[len(args)-2]
 
@@ -99,7 +131,7 @@ func main() {
 			}
 		}
 
-		// commands handle
+		// handle commands
 		if strings.HasPrefix(cmdName, "exit") {
 			if fileToClose != nil {
 				fileToClose.Close()
