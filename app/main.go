@@ -26,6 +26,12 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 		}
 	}
 
+	// print bell character if no matchs
+	if len(matches) == 0 {
+		fmt.Print("\a")
+		return nil, 0
+	}
+
 	for _, cmd := range matches {
 		suffix := cmd[len(current):]
 
