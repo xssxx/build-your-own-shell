@@ -70,6 +70,16 @@ func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
 
 		if len(matches) == 1 {
 			suffix += " "
+		} else if len(matches) >= 2 {
+			// [TODO]: implement shell partial completions
+			// $ ls
+			// xyz_bar xyz_baz xyz_guz
+			// $ xyz_<TAB><TAB>
+			// xyz_bar  xyz_baz  xyz_quz
+			// $ xyz_
+
+			// similar to some problem in leetcode
+			continue
 		}
 
 		suggestions = append(suggestions, []rune(suffix))
