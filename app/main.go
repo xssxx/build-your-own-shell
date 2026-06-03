@@ -1,33 +1,73 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"slices"
 	"strings"
+
+	"github.com/chzyer/readline"
 )
 
 var builtin []string = []string{"echo", "exit", "type", "pwd", "cd"}
 
+type TabCompleter struct{}
+
+func (t *TabCompleter) Do(line []rune, pos int) (newLine [][]rune, length int) {
+	current := string(line[:pos])
+	var suggestions [][]rune
+
+	var matches []string
+	for _, cmd := range builtin {
+		if strings.HasPrefix(cmd, current) {
+			matches = append(matches, cmd)
+		}
+	}
+
+	for _, cmd := range matches {
+		suffix := cmd[len(current):]
+
+		if len(matches) == 1 {
+			suffix += " "
+		}
+
+		suggestions = append(suggestions, []rune(suffix))
+	}
+
+	return suggestions, len(current)
+}
+
 func main() {
-	reader := bufio.NewReader(os.Stdin)
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:       "$ ",
+		AutoComplete: &TabCompleter{},
+	})
+	rl.Config.AutoComplete = &TabCompleter{}
+	if err != nil {
+		panic(err)
+	}
+	defer rl.Close()
 
 	for {
-		fmt.Fprint(os.Stdout, "$ ")
-		cmd, err := reader.ReadString('\n')
+		// fmt.Fprint(os.Stdout, "$ ")
+		// cmd, err := reader.ReadString('\n')
+
+		cmd, err := rl.Readline()
+		readline.AddHistory(cmd)
+		readline.SetAutoComplete(rl.Config.AutoComplete)
+
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			continue
+		}
+
 		cmd = strings.TrimSpace(cmd)
 		fields := parseArgs(cmd)
 
 		if len(fields[0]) == 0 {
 			os.Exit(0)
-		}
-
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			continue
 		}
 
 		cmdName := fields[0]
